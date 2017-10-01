@@ -99,7 +99,7 @@ def white_thresh(img, thresh=(0, 255)):
     binary_output[(l_channel >= thresh[0]) & (l_channel <= thresh[1])] = 1
     return binary_output
 
-# Threshold on B channel of Lab color space, targeting at white lane markings
+# Threshold on B channel of Lab color space, targeting at yellow lane markings
 def yellow_thresh(img, thresh=(0, 255)):
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2Lab)
     b_channel = hls[:,:,2]
@@ -180,7 +180,7 @@ def process_image(image):
     dist = process_image.dist
     last_l_centroids = process_image.last_l_centroids
     last_r_centroids = process_image.last_r_centroids
-    # Because OpenCV assumes channels as B, G, R
+    # Because OpenCV assumes channels as B, G, R, we need to reverse the order of the channels
     # cv2.imwrite('./output_images/raw.jpg', image[:, :, ::-1])
 
     # Step 2: apply distortion correction to raw images
@@ -249,6 +249,7 @@ def process_image(image):
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
 
+    # Step 6: determine the curvature of the lane and vehicle position with respect to center
     ploty = np.linspace(0, 719, num=720)# to cover same y-range as image
     left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
     right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
@@ -267,7 +268,6 @@ def process_image(image):
     left_fit_cr = np.polyfit(lefty*ym_per_pix, leftx*xm_per_pix, 2)
     right_fit_cr = np.polyfit(righty*ym_per_pix, rightx*xm_per_pix, 2)
 
-    # Step 6: determine the curvature of the lane and vehicle position with respect to center
     # Calculate the new radii of curvature
     # Now our radius of curvature is in meters
     left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])

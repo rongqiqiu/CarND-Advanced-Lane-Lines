@@ -47,60 +47,48 @@ I then used the output `objpoints` and `imgpoints` to compute the camera calibra
 
 ### Pipeline (single images)
 
+To demonstrate how I approached these steps, the first frame of video named `project_video.mp4` will be used below.
+
 #### 1. Provide an example of a distortion-corrected image.
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
+Using the camera calibration and distortion coefficients computed above, I simply applied `cv2.undistort()` to obstain this result:
+
 ![alt text][image2]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines #48 - #117 and #202 - #206 in `detect_lanes.py`). For gradient thresholds, I used two methods: absolute value on Sobel x direction; magnitude and direction of Sobel output. For color thresholds, I used two methods: L channel of HLS color space (targeting at white lane markings); B channel of Lab color space (targeting at yellow lane markings).
+
+Here's an example of my output for this step. Note that I applied perspective transform before this step, because lanes are mostly upright after transformation and easier to be detected.
 
 ![alt text][image3]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform appears in lines #191 through #199 in the file `detect_lanes.py` I chose the hardcode the source and destination points in the following manner:
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+src = np.float32([(238, 684), (1060, 684), (588, 451), (688, 451)])
+dst = np.float32([(320, 720), (960, 720), (320, 0), (960, 0)])
 ```
 
-This resulted in the following source and destination points:
-
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
-
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
+After perspective transform I obtained the following result:
 
 ![alt text][image4]
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+My approach is based on the `convolution` approach given in the course. At each frame, the image is divided into 9 levels vertically, and centroids are computed from bottom to top. At each level, centroids are searched near those of the last level, and those of the last frame (in the same level), thus maintaining spatial and temporal continuity. Details can be found on lines #208 - #250 of `detect_lanes.py`. Then I collected all inlier points and fit a 2nd order polynomial. Example of lane detection is given below:
 
 ![alt text][image5]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+I did this in lines #252 through #280 in my code in `detect_lanes.py`. Curvature is computed according to the bottom of the image, which is then converted to radius in meters. Offset of vehicle is computed by the substracting average of left/right lane markings from image center (car position).
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in lines #282 through #328 in my code in `detect_lanes.py`. Basically I overlayed left lane markings, right lane markings and in-between spaces to the transformed image, and apply inversed perspective transformation. Then I add texts of curvature (average of left and right) and offset. Here is an example of my result:
 
 ![alt text][image6]
 
@@ -110,8 +98,6 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-![alt text][video1]
-
 Here's a [link to my video result](./project_video_output.mp4)
 
 ---
@@ -120,4 +106,4 @@ Here's a [link to my video result](./project_video_output.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+The most difficult part was tuning the parameters of gradient and color thresholds. On some frames (shadows, occlusions, color change, etc.), enforcing spatial continuity is not sufficient, thus I added temporal continuity (comparing with centroids of last frame). If sharp features occur near the real lane markings, the algorithm will likely to detect those as lane markings. A better set of thresholds (or better approach) to discriminate lane markings from distractions may be needed to make the algorithm more robust.
